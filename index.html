@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Editor de Imagem</title>
+  <title>Editor de Imagem do Bielson</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -35,6 +35,14 @@
 </head>
 <body>
 
+<label for="toolSelect">Ferramenta:</label>
+<select id="toolSelect">
+  <option value="brush">Pincel</option>
+  <option value="spray">Spray</option>
+</select>
+
+
+
 <label for="brushSize">Tamanho do pincel:</label>
 <input type="range" id="brushSize" min="1" max="50" value="10">
 <span id="brushSizeValue">10</span>
@@ -49,16 +57,19 @@
     </div>
   </div>
 
-  <script>const upload = document.getElementById('upload');
+  <script>
+
+    const upload = document.getElementById('upload');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const colorPicker = document.getElementById('colorPicker');
 const brushSizeInput = document.getElementById('brushSize');
 const brushSizeValue = document.getElementById('brushSizeValue');
+const toolSelect = document.getElementById('toolSelect');
 
 let img = new Image();
+let spraying = false;
 
-// Atualizar o valor exibido do pincel
 brushSizeInput.addEventListener('input', () => {
   brushSizeValue.textContent = brushSizeInput.value;
 });
@@ -78,7 +89,7 @@ img.onload = function() {
   canvas.width = img.width;
   canvas.height = img.height;
 
-  // Aplicar clipping arredondado
+  // Aplicar arredondamento com clipping
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
@@ -96,6 +107,7 @@ img.onload = function() {
   ctx.clip();
 
   ctx.drawImage(img, 0, 0);
+
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   for (let i = 0; i < imageData.data.length; i += 4) {
     const avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
@@ -107,65 +119,40 @@ img.onload = function() {
   ctx.restore();
 };
 
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const color = hexToRgb(colorPicker.value);
-  const brushRadius = parseInt(brushSizeInput.value, 10);
-
-  const imageData = ctx.getImageData(x - brushRadius, y - brushRadius, brushRadius * 2, brushRadius * 2);
-  for (let i = 0; i < imageData.data.length; i += 4) {
-    imageData.data[i] = color.r;
-    imageData.data[i + 1] = color.g;
-    imageData.data[i + 2] = color.b;
-  }
-  ctx.putImageData(imageData, x - brushRadius, y - brushRadius);
-});
-
-function hexToRgb(hex) {
-  const bigint = parseInt(hex.slice(1), 16);
-  return {
-    r: (bigint >> 16) & 255,
-    g: (bigint >> 8) & 255,
-    b: bigint & 255
-  };
-}
-
-
-let spraying = false;
-
+// Eventos de pintura com mouse
 canvas.addEventListener('mousedown', () => spraying = true);
 canvas.addEventListener('mouseup', () => spraying = false);
 canvas.addEventListener('mouseleave', () => spraying = false);
 
 canvas.addEventListener('mousemove', (e) => {
   if (spraying) {
-    sprayPaint(e);
+    paint(e);
   }
 });
 
-function sprayPaint(e) {
+// Função de pintura (spray ou pincel)
+function paint(e) {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+  const brushSize = parseInt(brushSizeInput.value, 10);
+  const tool = toolSelect.value;
 
-  const color = hexToRgb(colorPicker.value);
-  const radius = parseInt(brushSizeInput.value, 10);
-  const density = 50; // Quantidade de pontos por spray (aumente para mais densidade)
-
-  for (let i = 0; i < density; i++) {
-    const angle = Math.random() * 2 * Math.PI;
-    const r = Math.random() * radius;
-    const dx = Math.cos(angle) * r;
-    const dy = Math.sin(angle) * r;
-    const px = x + dx;
-    const py = y + dy;
-
-    // Pinta 1 pixel por ponto
+  if (tool === 'spray') {
+    const density = 50;
+    for (let i = 0; i < density; i++) {
+      const angle = Math.random() * 2 * Math.PI;
+      const r = Math.random() * brushSize;
+      const dx = Math.cos(angle) * r;
+      const dy = Math.sin(angle) * r;
+      ctx.fillStyle = colorPicker.value;
+      ctx.fillRect(x + dx, y + dy, 1, 1);
+    }
+  } else if (tool === 'brush') {
+    ctx.beginPath();
+    ctx.arc(x, y, brushSize, 0, 2 * Math.PI);
     ctx.fillStyle = colorPicker.value;
-    ctx.fillRect(px, py, 1, 1);
+    ctx.fill();
   }
 }
 
