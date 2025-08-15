@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Editor de Imagem do Bielson</title>
+  <title>Editor de Imagem</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,9 +31,47 @@
       max-width: 200px;
       text-align: left;
     }
+
+    .container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+canvas {
+  border: 1px solid #ccc;
+  cursor: crosshair;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+img#originalImage {
+  max-width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.original,
+.edited {
+  text-align: center;
+}
+
   </style>
 </head>
 <body>
+<h1>Editor de Imagem</h1>
+
+<input type="file" id="upload" accept="image/*"><br><br>
+
+<label for="colorPicker">Cor:</label>
+<input type="color" id="colorPicker" value="#ff0000">
+
+<label for="brushSize">Tamanho do pincel:</label>
+<input type="range" id="brushSize" min="1" max="50" value="10">
+<span id="brushSizeValue">10</span>
 
 <label for="toolSelect">Ferramenta:</label>
 <select id="toolSelect">
@@ -41,21 +79,23 @@
   <option value="spray">Spray</option>
 </select>
 
+<div class="container">
+  <!-- Imagem original -->
+  <div class="original">
+    <p><strong>Imagem Original:</strong></p>
+    <img id="originalImage" src="" alt="Imagem original" />
+  </div>
 
-
-<label for="brushSize">Tamanho do pincel:</label>
-<input type="range" id="brushSize" min="1" max="50" value="10">
-<span id="brushSizeValue">10</span>
-
-  <h1>Editor de Imagem</h1>
-  <input type="file" id="upload" accept="image/*">
-  <input type="color" id="colorPicker" value="#ff0000">
-  <div class="container">
+  <!-- Canvas editável -->
+  <div class="edited">
+    <p><strong>Imagem Editável:</strong></p>
     <canvas id="canvas"></canvas>
     <div class="instructions">
-      <p>Escolha uma cor e clique na imagem para pintar.</p>
+      <p>Escolha uma ferramenta, cor e tamanho.<br>Clique ou arraste para pintar.</p>
     </div>
   </div>
+</div>
+
 
   <script>
 
@@ -66,6 +106,7 @@ const colorPicker = document.getElementById('colorPicker');
 const brushSizeInput = document.getElementById('brushSize');
 const brushSizeValue = document.getElementById('brushSizeValue');
 const toolSelect = document.getElementById('toolSelect');
+const originalImage = document.getElementById('originalImage');
 
 let img = new Image();
 let spraying = false;
@@ -81,15 +122,16 @@ upload.addEventListener('change', (e) => {
   const reader = new FileReader();
   reader.onload = function(event) {
     img.src = event.target.result;
+    originalImage.src = event.target.result; // <-- Exibir imagem original
   };
   reader.readAsDataURL(file);
 });
 
-img.onload = function() {
+img.onload = function () {
   canvas.width = img.width;
   canvas.height = img.height;
 
-  // Aplicar arredondamento com clipping
+  // Aplicar bordas arredondadas via clipping
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
@@ -108,6 +150,7 @@ img.onload = function() {
 
   ctx.drawImage(img, 0, 0);
 
+  // Converter para preto e branco
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   for (let i = 0; i < imageData.data.length; i += 4) {
     const avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
@@ -119,7 +162,7 @@ img.onload = function() {
   ctx.restore();
 };
 
-// Eventos de pintura com mouse
+// Ferramentas: spray e pincel
 canvas.addEventListener('mousedown', () => spraying = true);
 canvas.addEventListener('mouseup', () => spraying = false);
 canvas.addEventListener('mouseleave', () => spraying = false);
@@ -130,7 +173,6 @@ canvas.addEventListener('mousemove', (e) => {
   }
 });
 
-// Função de pintura (spray ou pincel)
 function paint(e) {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -155,6 +197,7 @@ function paint(e) {
     ctx.fill();
   }
 }
+
 
   </script>
 </body>
